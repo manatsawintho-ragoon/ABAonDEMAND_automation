@@ -9,6 +9,7 @@ from core.engine import AutomationEngine
 from core.progress_store import ProgressStore
 from core.state import AppState, EpisodeStatus
 from courses.base_course import CourseConfig
+from courses.mslearn.base_config import MSLearnCourseConfig
 from ui import theme
 from ui.control_bar import ControlBar
 from ui.credentials_panel import CredentialsPanel
@@ -166,16 +167,31 @@ class App(tk.Tk):
             messagebox.showwarning("Login", "กรุณากรอก Email และ Password")
             return
 
-        self._engine = AutomationEngine(
-            course=self._current_course,
-            email=email,
-            password=password,
-            headless=self._opts.headless,
-            speed=self._opts.speed,
-            data_dir=DATA_DIR,
-            on_state_change=self._on_state_change,
-            ep_filter=ep_filter,
-        )
+        if isinstance(self._current_course, MSLearnCourseConfig):
+            from courses.mslearn.engine import MSLearnEngine
+            self._engine = MSLearnEngine(
+                course=self._current_course,
+                email=email,
+                password=password,
+                headless=self._opts.headless,
+                speed=self._opts.speed,
+                data_dir=DATA_DIR,
+                on_state_change=self._on_state_change,
+                ep_filter=ep_filter,
+                api_key=self._opts.api_key,
+                ai_model=self._opts.ai_model,
+            )
+        else:
+            self._engine = AutomationEngine(
+                course=self._current_course,
+                email=email,
+                password=password,
+                headless=self._opts.headless,
+                speed=self._opts.speed,
+                data_dir=DATA_DIR,
+                on_state_change=self._on_state_change,
+                ep_filter=ep_filter,
+            )
         self._engine.start()
         self._ctrl.set_running(True)
         self._timing.set_running(True)
@@ -200,8 +216,13 @@ class App(tk.Tk):
         self._ctrl.set_test_btn_state(False)
 
         def _run():
-            ok = asyncio.run(
-                AutomationEngine.test_login(self._current_course, email, password))
+            if isinstance(self._current_course, MSLearnCourseConfig):
+                from courses.mslearn.engine import MSLearnEngine
+                ok = asyncio.run(
+                    MSLearnEngine.test_login(self._current_course, email, password))
+            else:
+                ok = asyncio.run(
+                    AutomationEngine.test_login(self._current_course, email, password))
             self.after(0, lambda: self._on_login_test_done(ok))
 
         threading.Thread(target=_run, daemon=True).start()
@@ -223,9 +244,16 @@ class App(tk.Tk):
         if not email:
             return
         self._store.reset_episode(email, self._current_course.course_id, ep_idx)
-        self._store.clear_answer_cache(
-            email, self._current_course.course_id,
-            self._current_course.episodes[ep_idx].quiz_post_id)
+        ep = self._current_course.episodes[ep_idx]
+        if hasattr(ep, 'quiz_post_id') and ep.quiz_post_id != 0:
+            self._store.clear_answer_cache(
+                email, self._current_course.course_id, ep.quiz_post_id)
+        elif isinstance(self._current_course, MSLearnCourseConfig):
+            # Clear MS Learn module answer cache (stored by module_id hash)
+            import hashlib
+            cache_key = hash(ep.module_id) & 0xFFFF
+            self._store.clear_answer_cache(
+                email, self._current_course.course_id, cache_key)
         self._load_stored_progress()
 
     def _retry_episode(self, ep_idx: int) -> None:

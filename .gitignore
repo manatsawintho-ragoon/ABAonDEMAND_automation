@@ -1,7 +1,5 @@
 __pycache__/
 *.py[cod]
-data/progress.json
-data/profiles.json
-data/errors/
+data/
 .playwright-mcp/
 *.png

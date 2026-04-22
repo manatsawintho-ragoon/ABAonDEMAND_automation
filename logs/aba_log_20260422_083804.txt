@@ -1,0 +1,44 @@
+  [login] session ยังใช้งานได้
+✓ Login MS Learn สำเร็จ
+  [AI] OpenRouter พร้อม — google/gemini-2.0-flash-exp:free
+
+────────────────────────────────────────────────
+  Module 1: Learn the basics of web accessibility
+  [module] กำลังค้นหา units…
+  [module] พบ 7 units
+  [unit 1/7] 1-introduction
+  [unit] last unit — complete
+  [unit 2/7] 2-client-tools
+  [unit] last unit — complete
+  [unit 3/7] 3-developer-tools
+  [unit] last unit — complete
+  [unit 4/7] 4-links-images
+  [unit] last unit — complete
+  [unit 5/7] 5-accessibility-design-concepts
+  [unit] last unit — complete
+  [unit 6/7] 6-knowledge-check
+  [unit] knowledge check ตรวจพบ
+  [quiz] attempt 1/3
+    Q1: rand [0] '<a href="https://www.microsoft.com">http'
+    Q2: rand [0] 'To indicate to a screen reader that a di'
+    Q3: rand [0] 'div'
+  [quiz] score: 0%
+  [quiz] ✗ 0% — reload แล้วลองใหม่
+  [quiz] attempt 2/3
+    Q1: rand [1] '<a href="https://www.microsoft.com">Micr'
+    Q2: rand [1] 'To provide different text for a screen r'
+    Q3: rand [1] 'span'
+  [quiz] score: 33%
+  [quiz] เรียนรู้ +2 คำตอบ
+  [quiz] ✗ 33% — reload แล้วลองใหม่
+  [quiz] attempt 3/3
+    Q1: cache [1] '<a href="https://www.microsoft.com">Micr'
+    Q2: cache [2] 'To give context to a screen reader when '
+    Q3: rand [2] 'p'
+  [quiz] score: 67%
+  [quiz] เรียนรู้ +1 คำตอบ
+  [unit 7/7] 7-summary
+  [unit] last unit — complete
+  [module] → 100% ✓
+  ✓ Module 1 เสร็จ (100%)
+[Make decisions with JavaScript] ✓ ข้าม (ผ่านแล้ว)

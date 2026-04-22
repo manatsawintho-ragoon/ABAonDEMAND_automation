@@ -35,6 +35,11 @@ class CourseConfig:
     ])
 
     @property
+    def menu_name(self) -> str:
+        name = self.display_name
+        return name[:46] + "…" if len(name) > 46 else name
+
+    @property
     def login_url(self) -> str:
         return f"{self.site_url}/wp-login.php"
 

@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 from typing import Optional
 
@@ -21,6 +22,8 @@ class TimingPanel(tk.Frame):
         self._running = False
         self._elapsed = 0.0
         self._eta: Optional[float] = None
+        self._tick_origin: Optional[float] = None   # monotonic reference
+        self._elapsed_at_origin: float = 0.0
         self._build()
 
     def _build(self) -> None:
@@ -38,21 +41,29 @@ class TimingPanel(tk.Frame):
     # ── Public API ────────────────────────────────────────────────────────────
 
     def set_running(self, running: bool) -> None:
+        was_running = self._running
         self._running = running
-        if running:
+        if running and not was_running:
+            # Anchor the tick to current wall time
+            self._tick_origin = time.monotonic()
+            self._elapsed_at_origin = self._elapsed
             self._tick()
 
     def update(self, elapsed: float, eta: Optional[float]) -> None:
+        """Called by engine with authoritative elapsed value — re-sync tick origin."""
         self._elapsed = elapsed
-        self._eta     = eta
+        self._tick_origin = time.monotonic()
+        self._elapsed_at_origin = elapsed
+        self._eta = eta
         self._elapsed_var.set(_fmt(elapsed))
-        self._eta_var.set(_fmt(eta))
+        self._eta_var.set(_fmt(eta) if eta else "--:--")
 
-    # ── 1-second tick ─────────────────────────────────────────────────────────
+    # ── 1-second tick (UI thread only) ────────────────────────────────────────
 
     def _tick(self) -> None:
         if not self._running:
             return
-        self._elapsed += 1.0
+        if self._tick_origin is not None:
+            self._elapsed = self._elapsed_at_origin + (time.monotonic() - self._tick_origin)
         self._elapsed_var.set(_fmt(self._elapsed))
         self.after(1000, self._tick)

@@ -14,7 +14,11 @@ class Header(tk.Frame):
         super().__init__(master, bg=theme.HEADER_BG(), **kw)
         self._courses   = courses
         self._on_change = on_course_change
-        self._name_map  = {c.display_name: c for c in courses.values()}
+        # Map menu_name → course (for combobox selection callback)
+        self._menu_map  = {
+            getattr(c, 'menu_name', c.display_name): c
+            for c in courses.values()
+        }
         self._build()
 
     def _build(self) -> None:
@@ -31,18 +35,18 @@ class Header(tk.Frame):
                  bg=theme.HEADER_BG(), fg=theme.HEADER_FG()
                  ).pack(side="left", padx=(0, 6))
 
-        names = [c.display_name for c in self._courses.values()]
-        self._course_var = tk.StringVar(value=names[0] if names else "")
+        menu_names = [getattr(c, 'menu_name', c.display_name) for c in self._courses.values()]
+        self._course_var = tk.StringVar(value=menu_names[0] if menu_names else "")
         cb = ttk.Combobox(right, textvariable=self._course_var,
-                          values=names, state="readonly", width=38)
+                          values=menu_names, state="readonly", width=46)
         cb.pack(side="left")
         cb.bind("<<ComboboxSelected>>", self._on_select)
 
     def _on_select(self, _=None) -> None:
-        course = self._name_map.get(self._course_var.get())
+        course = self._menu_map.get(self._course_var.get())
         if course:
             self._on_change(course)
 
     @property
     def selected_course(self) -> CourseConfig:
-        return self._name_map[self._course_var.get()]
+        return self._menu_map[self._course_var.get()]

@@ -1,9 +1,11 @@
 {
-  "headless": true,
+  "headless": false,
   "speed": "fast",
   "dark_mode": false,
-  "last_profile": "manatsawin.tho@spumail.net",
-  "last_course": "UEN20367",
+  "last_profile": "manatsawin.tho@spulive.net",
+  "last_course": "MSLEARN_TSQL",
   "auto_start": false,
-  "window_geometry": "1011x680+689+112"
+  "window_geometry": "1028x680+563+184",
+  "openrouter_api_key": "",
+  "ai_model": "qwen/qwen3-next-80b-a3b-instruct:free"
 }

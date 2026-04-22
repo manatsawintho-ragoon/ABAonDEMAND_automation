@@ -37,12 +37,23 @@ class ProgressStore:
     # ── Episode completion ─────────────────────────────────────────────────
 
     def get_done_episodes(self, email: str, course_id: str,
-                          min_score: int = 100) -> Set[int]:
+                          min_score: int = 100,
+                          require_ms_confirmed: bool = False) -> Set[int]:
+        """Return episode indices that are complete and meet score threshold.
+
+        If require_ms_confirmed=True (used by MSLearnEngine), episodes that were
+        completed but never got explicit 'Module assessment passed' confirmation
+        are excluded so the engine re-runs them and obtains the profile badge.
+        """
         eps = self._course_data(email, course_id).get("episodes", {})
-        return {
-            int(k) for k, v in eps.items()
-            if v.get("complete") and v.get("score", 0) >= min_score
-        }
+        result = set()
+        for k, v in eps.items():
+            if not (v.get("complete") and v.get("score", 0) >= min_score):
+                continue
+            if require_ms_confirmed and not v.get("ms_confirmed", False):
+                continue
+            result.add(int(k))
+        return result
 
     def get_all_episode_details(self, email: str, course_id: str) -> Dict[int, dict]:
         """Returns {ep_idx: {score, complete, lesson_ok, ep, ts, attempts}}"""
@@ -53,7 +64,8 @@ class ProgressStore:
                      ep_idx: int, ep_name: str, score: int,
                      lesson_ok: bool = False,
                      attempts: int = 0,
-                     min_score: int = 100) -> None:
+                     min_score: int = 100,
+                     ms_confirmed: bool = False) -> None:
         with self._lock:
             data = self._load()
             bucket = data.setdefault(email, {}).setdefault(course_id, {})
@@ -64,6 +76,7 @@ class ProgressStore:
                 "ep": ep_name,
                 "ts": datetime.now().isoformat(timespec="seconds"),
                 "attempts": attempts,
+                "ms_confirmed": ms_confirmed,
             }
             self._atomic_save(data)
 

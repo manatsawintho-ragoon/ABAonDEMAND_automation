@@ -11,6 +11,8 @@ _DEFAULTS = {
     "last_course": "",
     "auto_start": False,
     "window_geometry": "",
+    "openrouter_api_key": "",
+    "ai_model": "",
 }
 
 
