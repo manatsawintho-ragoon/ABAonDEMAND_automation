@@ -1,11 +1,11 @@
 {
-  "headless": false,
+  "headless": true,
   "speed": "fast",
   "dark_mode": false,
   "last_profile": "manatsawin.tho@spulive.net",
-  "last_course": "MSLEARN_TSQL",
+  "last_course": "UEN20367",
   "auto_start": false,
-  "window_geometry": "1028x680+563+184",
-  "openrouter_api_key": "",
+  "window_geometry": "1291x680+259+174",
+  "openrouter_api_key": "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",
   "ai_model": "qwen/qwen3-next-80b-a3b-instruct:free"
 }

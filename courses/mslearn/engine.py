@@ -96,15 +96,18 @@ _JS_IS_SIGNED_IN = '''
     if (!location.hostname.includes('learn.microsoft.com')) return false;
     // Positive signals — any one is sufficient
     if (document.querySelector(
-        '#mectrl_headerPicture, #mectrl_currentAccount_primary, [data-bi-name="profile-button"]'
+        '#mectrl_headerPicture, #mectrl_currentAccount_primary, [data-bi-name="profile-button"], .mectrl_profile_image'
     )) return true;
-    if (/welcome back/i.test(document.body.innerText || '')) return true;
-    // Negative fallback — no *visible* "Sign in" element in header
-    const header = document.querySelector('header, [role="banner"]');
-    if (!header) return false;
-    return !Array.from(header.querySelectorAll('a, button')).some(el =>
-        /^sign[\\s-]?in$/i.test((el.innerText || '').trim()) && el.offsetParent !== null
+    if (/welcome back|sign.?out|log.?out/i.test(document.body.innerText || '')) return true;
+
+    // If we definitely see a Sign In button, we are NOT signed in
+    const hasSignIn = Array.from(document.querySelectorAll('a, button')).some(el =>
+        /^(sign[\\s-]?in|log[\\s-]?in)$/i.test((el.innerText || '').trim()) && el.offsetParent !== null
     );
+    if (hasSignIn) return false;
+
+    // If no positive signals found, assume not signed in (conservative)
+    return false;
 }
 '''
 
@@ -422,38 +425,55 @@ class MSLearnEngine:
 
     async def _login(self, session: BrowserSession, page: Page,
                      ctx: BrowserContext, browser) -> bool:
+        async def is_signed_in():
+            try:
+                # Need to be on the right domain for the check to make sense
+                if 'learn.microsoft.com' not in page.url:
+                    return False
+                return await page.evaluate(_JS_IS_SIGNED_IN)
+            except Exception:
+                return False
+
         try:
             await page.goto(self._course.training_url,
-                            wait_until="domcontentloaded", timeout=25000)
+                            wait_until="load", timeout=30000)
             try:
                 await page.wait_for_load_state("networkidle", timeout=8000)
             except PwTimeout:
                 pass
             await session.delay(2.0)  # extra wait for Microsoft header JS to render
 
-            if await page.evaluate(_JS_IS_SIGNED_IN):
+            if await is_signed_in():
                 self._log("  [login] session ยังใช้งานได้")
                 return True
 
             # Click sign-in
             self._log("  [login] กำลัง sign in…")
-            clicked = await page.evaluate(_JS_SIGN_IN_CLICK)
+            try:
+                clicked = await page.evaluate(_JS_SIGN_IN_CLICK)
+            except Exception as e:
+                # If context is destroyed immediately, it usually means navigation started
+                if "destroyed" in str(e).lower() or "navigation" in str(e).lower():
+                    clicked = True
+                else:
+                    clicked = False
+
             if not clicked:
                 await page.goto(
                     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
                     "?client_id=18fbca16-2224-45f6-85b0-f7bf2b39b3f3"
                     "&response_type=code&scope=openid%20profile%20email"
                     f"&login_hint={self._email}",
-                    wait_until="domcontentloaded", timeout=20000)
+                    wait_until="load", timeout=25000)
 
             try:
                 await page.wait_for_load_state("networkidle", timeout=10000)
             except PwTimeout:
                 pass
-            await session.delay(1.0)
+            await session.delay(1.5)
 
             # Re-check: clicking sign-in might redirect back if already authenticated
-            if 'learn.microsoft.com' in page.url and await page.evaluate(_JS_IS_SIGNED_IN):
+            if await is_signed_in():
                 self._log("  [login] ✓ พบว่า login อยู่แล้ว")
                 return True
 
@@ -461,8 +481,8 @@ class MSLearnEngine:
 
             # _do_login_static may return False if no login form found (already signed in)
             if not ok:
-                await asyncio.sleep(1.5)
-                if 'learn.microsoft.com' in page.url and await page.evaluate(_JS_IS_SIGNED_IN):
+                await asyncio.sleep(2.0)
+                if await is_signed_in():
                     self._log("  [login] ✓ session ใช้งานได้ (detected หลัง login attempt)")
                     return True
 
@@ -473,19 +493,12 @@ class MSLearnEngine:
                         if not self._running():  # Stop button check
                             return False
                         await asyncio.sleep(1)
-                        try:
-                            if 'learn.microsoft.com' in page.url:
-                                if await page.evaluate(_JS_IS_SIGNED_IN):
-                                    ok = True
-                                    break
-                        except Exception:
-                            pass
+                        if await is_signed_in():
+                            ok = True
+                            break
                     if not ok:
                         self._log("  [login] timeout รอ MFA")
-                        try:
-                            ok = await page.evaluate(_JS_IS_SIGNED_IN)
-                        except Exception:
-                            pass
+                        ok = await is_signed_in()
                 else:
                     self._session_file.unlink(missing_ok=True)
                     self._log("  [login] ต้องการ MFA — ปิด Headless option แล้วรันใหม่ครั้งเดียว")
